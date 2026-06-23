@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Finance Pro - Catatan Keuangan</title>
+    
+    <meta name="theme-color" content="#2563eb">
+    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Finance Pro">
+    
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+    
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; 
+            background-color: #cbd5e1; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        #loading-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: opacity 0.5s ease;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* --- STYLING UNTUK BANNER INSTALL PWA --- */
+        #pwa-install-banner {
+            position: fixed;
+            bottom: -100px; /* Hidden by default */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 400px;
+            background-color: #ffffff;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 9999;
+            transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #pwa-install-banner.show {
+            bottom: 24px; /* Show position */
+        }
+        .pwa-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .pwa-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background-color: #f1f5f9;
+        }
+        .pwa-text h4 {
+            margin: 0 0 4px 0;
+            font-size: 14px;
+            color: #0f172a;
+        }
+        .pwa-text p {
+            margin: 0;
+            font-size: 12px;
+            color: #64748b;
+            line-height: 1.4;
+        }
+        .pwa-btn {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .pwa-close {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #cbd5e1;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <p style="margin-top: 16px; color: #64748b; font-weight: 600;">Memuat sistem aman...</p>
+    </div>
+
+    <!-- GANTI LINK SRC DI BAWAH INI DENGAN LINK GOOGLE APPS SCRIPT ANDA -->
+    <iframe src="https://script.google.com/macros/s/AKfycbyqxpN3BPWcsU5nLZge2GJoR-jJW5dyp9U6FCxDiEv3ta6DPMFRj_SyufjreV4DBcHPBw/exec" onload="hideLoading()"></iframe>
+
+    <!-- BANNER PWA -->
+    <div id="pwa-install-banner">
+        <button class="pwa-close" onclick="closeInstallBanner()">✕</button>
+        <div class="pwa-info">
+            <img src="/icon-192.png" alt="Icon" class="pwa-icon">
+            <div class="pwa-text">
+                <h4>Finance Pro</h4>
+                <p id="pwa-desc">Install aplikasi ini di layar utama HP Anda.</p>
+            </div>
+        </div>
+        <button id="pwa-install-btn" class="pwa-btn">Install</button>
+    </div>
+
+    <script>
+        // Menghilangkan loading saat iframe selesai dimuat
+        function hideLoading() {
+            var overlay = document.getElementById('loading-overlay');
+            overlay.style.opacity = '0';
+            setTimeout(function() {
+                overlay.style.display = 'none';
+            }, 500);
+        }
+
+        // --- LOGIKA PWA INSTALL PROMPT ---
+        let deferredPrompt;
+        const installBanner = document.getElementById('pwa-install-banner');
+        const installBtn = document.getElementById('pwa-install-btn');
+        const pwaDesc = document.getElementById('pwa-desc');
+
+        // Deteksi jika pengguna menggunakan perangkat iOS (iPhone/iPad)
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        // Deteksi apakah aplikasi sudah berjalan dalam mode standalone (PWA terinstall)
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+        if (!isStandalone) {
+            if (isIOS) {
+                // Tampilan khusus iOS (karena Apple tidak mendukung prompt install otomatis)
+                setTimeout(() => {
+                    pwaDesc.innerHTML = "Ketuk ikon <b>Share</b> <br>lalu <b>Add to Home Screen</b>";
+                    installBtn.style.display = "none"; // Sembunyikan tombol install karena tidak berguna di iOS
+                    installBanner.classList.add('show');
+                }, 3000); // Munculkan banner setelah 3 detik
+            } else {
+                // Tampilan untuk Android (Menunggu event dari browser Chrome)
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault(); // Cegah prompt bawaan browser
+                    deferredPrompt = e; // Simpan event untuk dipicu nanti
+                    installBanner.classList.add('show');
+                });
+            }
+        }
+
+        // Aksi ketika tombol install diklik (Android)
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt(); // Tampilkan prompt install asli dari Google
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('User accepted the install prompt');
+                }
+                deferredPrompt = null;
+                closeInstallBanner();
+            }
+        });
+
+        function closeInstallBanner() {
+            installBanner.classList.remove('show');
+        }
+
+        // Sembunyikan banner jika aplikasi berhasil di-install
+        window.addEventListener('appinstalled', () => {
+            closeInstallBanner();
+        });
+    </script>
+</body>
+</html>
